@@ -1,3 +1,5 @@
+.env
+node_modules/
 # macOS
 .DS_Store
 .AppleDouble
@@ -20,4 +22,5 @@ pnpm-debug.log*
 .env.*.local
 
 # System files
+Thumbs.db
 Thumbs.db
