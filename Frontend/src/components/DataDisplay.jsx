@@ -1,44 +1,42 @@
 import { useState, useEffect } from "react";
 
 function DataDisplay() {
-  // 1. State to store the data we receive (initially null)
   const [data, setData] = useState(null);
 
-  // 2. useEffect runs once when the component mounts
   useEffect(() => {
-    // --- Mock Data Section ---
-    // This object simulates the response we expect from the backend.
-    // TODO: Replace this object with a real fetch() call when endpoints are ready.
-    const mockData = {
-      message: "This is temporary mock data",
-      status: "success",
-      users: [
-        { id: 1, name: "Alice" },
-        { id: 2, name: "Bob" },
-      ],
-      system_check: "All systems operational",
+    // 1. Define the function that fetches data
+    const fetchData = () => {
+      // In the future, the real backend call will be here
+      const mockData = {
+        timestamp: new Date().toLocaleTimeString(), // Shows time updating
+        cars_waiting: Math.floor(Math.random() * 10), // Simulates changing data
+        light_status: "RED",
+        message: "Live data feed active",
+      };
+
+      console.log("Fetching new data...");
+      setData(mockData);
     };
 
-    // Update the state with the mock data
-    setData(mockData);
-  }, []);
+    // 2. Call the function immediately on first render
+    fetchData();
+
+    // 3. Set up an interval to fetch data every 1000ms (1 second)
+    const intervalId = setInterval(fetchData, 1000);
+
+    // 4. Cleanup function: clears the interval when the component unmounts
+    // This prevents memory leaks and errors when navigating away
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array means this effect runs once on mount
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      <h2>Backend Data Output</h2>
-      <p>Raw JSON view for development:</p>
-
-      {/* 3. Display the raw data using JSON.stringify for easy debugging */}
-      <div
-        style={{
-          background: "#f4f4f4",
-          padding: "15px",
-          borderRadius: "8px",
-          border: "1px solid #ddd",
-        }}
+    <div style={{ padding: "20px", fontFamily: "monospace" }}>
+      <h2>Backend Live Data Output:</h2>
+      <pre
+        style={{ background: "#f0f0f0", padding: "15px", borderRadius: "5px" }}
       >
-        <pre>{JSON.stringify(data, null, 2)}</pre>
-      </div>
+        {JSON.stringify(data, null, 2)}
+      </pre>
     </div>
   );
 }
