@@ -10,13 +10,12 @@ import {
   CloudRain,
   Sun,
   Cloud,
-  Thermometer,
   User,
 } from "lucide-react";
 
 const COLORS = ["#3b82f6", "#ef4444"];
 
-// Helper component to render weather icon dynamically
+// Helper component for weather icons
 const WeatherIcon = ({ condition }) => {
   if (condition === "Rainy")
     return <CloudRain size={16} className="text-blue-500" />;
@@ -40,7 +39,6 @@ const Dashboard = () => {
     };
 
     fetchData();
-    // Refresh data every 3 seconds to simulate real-time updates
     const intervalId = setInterval(fetchData, 3000);
     return () => clearInterval(intervalId);
   }, []);
@@ -84,7 +82,7 @@ const Dashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto p-4 space-y-6">
-        {/* --- CROSSWALKS STATUS CARDS --- */}
+        {/* --- CROSSWALKS STATUS --- */}
         <section>
           <h2 className="text-lg font-bold mb-3 text-gray-700">
             System Nodes Status
@@ -95,14 +93,12 @@ const Dashboard = () => {
                 key={cw.id}
                 className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4"
               >
-                {/* Top Row: Name and Status */}
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-bold text-lg text-gray-800">
                       {cw.name}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
-                      {/* Dynamic Network Status */}
                       <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
                         <Wifi
                           size={12}
@@ -114,7 +110,6 @@ const Dashboard = () => {
                         />
                         <span>{cw.network.ping}</span>
                       </div>
-                      {/* Dynamic Weather Status */}
                       <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
                         <WeatherIcon condition={cw.environment.weather} />
                         <span>{cw.environment.temp}°C</span>
@@ -135,7 +130,6 @@ const Dashboard = () => {
 
                 <hr className="border-gray-100" />
 
-                {/* Bottom Row: Hardware Status */}
                 <div className="flex gap-4 text-sm text-gray-500 justify-around">
                   <div
                     className={`flex flex-col items-center gap-1 ${
@@ -169,7 +163,7 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* --- MAIN GRID (Charts + Table) --- */}
+        {/* --- MAIN GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Events Table */}
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -183,9 +177,10 @@ const Dashboard = () => {
                 <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
                   <tr>
                     <th className="p-3">Time</th>
-                    <th className="p-3">Object Type</th>
+                    <th className="p-3">Type</th>
+                    {/* RESTORED COUNT COLUMN */}
+                    <th className="p-3">Count</th>
                     <th className="p-3">Location</th>
-                    {/* Hidden on mobile, visible on desktop */}
                     <th className="p-3 hidden md:table-cell">Distance</th>
                   </tr>
                 </thead>
@@ -199,6 +194,10 @@ const Dashboard = () => {
                         {event.time}
                       </td>
                       <td className="p-3 font-medium">{event.type}</td>
+                      {/* DISPLAY COUNT VALUE */}
+                      <td className="p-3 font-bold text-gray-800">
+                        {event.objectsCount}
+                      </td>
                       <td className="p-3 text-gray-600 truncate max-w-[100px]">
                         {event.location}
                       </td>
