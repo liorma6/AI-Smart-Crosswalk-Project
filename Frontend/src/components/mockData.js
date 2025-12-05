@@ -4,27 +4,44 @@ const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 export const getDashboardData = () => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      // Generate current time string
       const now = new Date();
-      const timeString = now.toLocaleTimeString("en-GB"); // HH:MM:SS format
+      const timeString = now.toLocaleTimeString("en-GB");
 
-      // Randomize stats
-      const detectionValue = Math.floor(Math.random() * 60) + 20; // 20-80
+      // Randomize stats for the chart
+      const detectionValue = Math.floor(Math.random() * 60) + 20;
       const alertValue = 100 - detectionValue;
 
       resolve({
-        // 1. Crosswalks with semi-random status
+        // 1. Crosswalks - Now with specific Environment & Network data
         crosswalks: [
           {
             id: 1,
             name: "Allenby-Rothschild Junction",
-            status: Math.random() > 0.1 ? "active" : "maintenance", // 90% chance active
+            status: Math.random() > 0.1 ? "active" : "maintenance",
+            // Specific data for this location
+            environment: {
+              weather: "Rainy",
+              temp: 19,
+            },
+            network: {
+              ping: "24ms",
+              signal: "Good",
+            },
             hardware: { camera: true, ledPanel: true, controller: true },
           },
           {
             id: 2,
             name: "Begin Road (Near Mall)",
             status: Math.random() > 0.3 ? "active" : "maintenance",
+            // Specific data for this location (different from the first one)
+            environment: {
+              weather: "Sunny",
+              temp: 24,
+            },
+            network: {
+              ping: "120ms", // High ping example
+              signal: "Weak",
+            },
             hardware: {
               camera: true,
               ledPanel: Math.random() > 0.5,
@@ -33,36 +50,34 @@ export const getDashboardData = () => {
           },
         ],
 
-        // 2. Events that look "fresh" with current time
+        // 2. Events Log
         recentEvents: [
           {
-            id: Date.now(), // Unique ID based on timestamp
+            id: Date.now(),
             time: timeString,
-            location: getRandom([
-              "Allenby-Rothschild",
-              "Begin Road",
-              "Kaplan St",
-            ]),
-            objectsCount: Math.floor(Math.random() * 5) + 1, // 1-5 objects
+            location: getRandom(["Allenby", "Begin Road", "Kaplan"]),
+            objectsCount: Math.floor(Math.random() * 5) + 1,
             distance: `${(Math.random() * 3).toFixed(1)}m`,
+            type: getRandom(["Pedestrian", "Cyclist", "Dog"]),
           },
           {
             id: Date.now() - 1000,
-            time: new Date(now - 5000).toLocaleTimeString("en-GB"), // 5 seconds ago
-            location: getRandom(["Allenby-Rothschild", "Begin Road"]),
+            time: new Date(now - 5000).toLocaleTimeString("en-GB"),
+            location: getRandom(["Allenby", "Begin Road"]),
             objectsCount: Math.floor(Math.random() * 3) + 1,
             distance: `${(Math.random() * 5).toFixed(1)}m`,
+            type: "Pedestrian",
           },
         ],
 
-        // 3. Stats that move
+        // 3. System Stats
         stats: [
           { name: "Detection Only", value: detectionValue },
           { name: "True Alert (LEDs)", value: alertValue },
         ],
 
-        currentUser: { name: "Israel Israeli", role: "System Admin" },
+        currentUser: { name: "Israel Israeli", role: "Admin" },
       });
-    }, 500); // 500ms network delay
+    }, 500);
   });
 };
