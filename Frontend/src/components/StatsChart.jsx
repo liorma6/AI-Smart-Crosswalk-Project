@@ -13,10 +13,13 @@ const StatsChart = ({ stats }) => {
         ];
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-      <h2 className="font-bold text-gray-700 mb-2 w-full text-center">
-        Efficiency Stats
-      </h2>
+    <div className="card p-5 flex flex-col items-center gap-3">
+      <div className="w-full text-center space-y-1">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 font-semibold">
+          Performance Mix
+        </p>
+        <h2 className="font-bold text-gray-800">Efficiency Stats</h2>
+      </div>
       <div className="h-48 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -36,7 +39,7 @@ const StatsChart = ({ stats }) => {
         </ResponsiveContainer>
       </div>
 
-      <div className="w-full mt-2 space-y-2">
+      <div className="w-full space-y-2">
         <div className="flex justify-between text-xs border-b border-gray-100 pb-1">
           <span className="flex items-center gap-1">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

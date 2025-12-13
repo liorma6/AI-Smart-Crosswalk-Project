@@ -101,7 +101,7 @@ const Dashboard = () => {
   if (error) return <div className="text-center p-6 text-red-600">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-10">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--ink)] pb-10">
       {/* Image Modal */}
       <ImageModal
         imageUrl={selectedImage}
@@ -109,46 +109,57 @@ const Dashboard = () => {
       />
 
       {/* --- HEADER --- */}
-      <header className="bg-white shadow-sm p-4 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="bg-blue-600 p-2 rounded-lg text-white">
+      <header className="sticky top-0 z-10 bg-gradient-to-r from-[#0f172a] via-[#111827] to-[#0f172a] shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-5 md:py-6 flex flex-col md:flex-row justify-between items-start gap-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/10 border border-white/10 p-2 rounded-lg">
               <Activity size={24} />
             </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold leading-tight">
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-white/60 font-semibold">
+                Live Dashboard
+              </p>
+              <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
                 Smart Crosswalk AI
               </h1>
-              <p className="text-xs text-gray-500">
-                {crosswalks.length} crosswalks | {alerts.length} alerts logged
+              <p className="text-sm text-white/70">
+                Monitoring {crosswalks.length} crosswalks · {alerts.length} alerts logged
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-            <span className="text-xs font-bold text-green-600 uppercase tracking-wider">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+            <span className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.12em]">
               System Live
-            </span>
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
+              </span>
             </span>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto p-4 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 mt-6 space-y-6">
         {/* --- CROSSWALKS STATUS --- */}
-        <section>
-          <h2 className="text-lg font-bold mb-3 text-gray-700">
-            System Nodes Status
-          </h2>
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--muted)] font-semibold">
+                Network Health
+              </p>
+              <h2 className="text-xl font-semibold mt-1">System Nodes</h2>
+            </div>
+            <span className="badge badge-neutral">
+              {crosswalks.length} active nodes
+            </span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {crosswalks.map((cw) => (
               <CrosswalkCard key={cw._id} crosswalk={cw} />
             ))}
             {crosswalks.length === 0 && (
-              <div className="col-span-2 text-sm text-gray-500 border border-dashed border-gray-200 rounded-lg p-4 text-center">
+              <div className="col-span-2 text-sm text-[var(--muted)] ghost rounded-xl p-4 text-center">
                 No crosswalks found. Create crosswalks via the backend to see them here.
               </div>
             )}
@@ -164,6 +175,17 @@ const Dashboard = () => {
           <StatsChart stats={stats} />
         </div>
       </div>
+
+      {/* --- FOOTER --- */}
+      <footer className="mt-10 px-4">
+        <div className="max-w-7xl mx-auto border-t border-gray-200 pt-4 pb-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-[var(--muted)]">
+          <span>Smart Crosswalk AI · Live monitoring</span>
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+            Last refresh every 5s
+          </span>
+        </div>
+      </footer>
     </div>
   );
 };

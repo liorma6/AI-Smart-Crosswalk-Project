@@ -6,19 +6,22 @@ const CrosswalkCard = ({ crosswalk }) => {
   const status = crosswalk.status || "unknown";
 
   const statusStyles = {
-    active: "bg-green-100 text-green-700",
+    active: "bg-emerald-100 text-emerald-700",
     maintenance: "bg-amber-100 text-amber-700",
     inactive: "bg-red-100 text-red-700",
     default: "bg-gray-100 text-gray-700",
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-bold text-lg text-gray-800">{crosswalk.name}</h3>
+    <div className="card p-5 flex flex-col gap-5">
+      <div className="flex justify-between items-start gap-3">
+        <div className="space-y-2">
+          <div className="h-1.5 w-12 rounded-full bg-gradient-to-r from-[#f97316] via-[#38bdf8] to-[#22c55e]"></div>
+          <h3 className="font-semibold text-lg text-gray-900 leading-snug">
+            {crosswalk.name}
+          </h3>
           {crosswalk.location && (
-            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
               <MapPin size={14} />
               <span>
                 {crosswalk.location.lat.toFixed(4)},{" "}
@@ -34,8 +37,6 @@ const CrosswalkCard = ({ crosswalk }) => {
           {status}
         </span>
       </div>
-
-      <hr className="border-gray-100" />
 
       {crosswalk.location && (
         <MiniMap
@@ -66,6 +67,11 @@ const CrosswalkCard = ({ crosswalk }) => {
             <LinkIcon size={14} />
             LED endpoint
           </a>
+        )}
+        {!crosswalk.ledSystemUrl && (
+          <span className="text-xs text-[var(--muted)] font-medium">
+            No LED endpoint provided
+          </span>
         )}
       </div>
     </div>
