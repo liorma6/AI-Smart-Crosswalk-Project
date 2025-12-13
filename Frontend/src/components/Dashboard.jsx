@@ -1,41 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { getDashboardData } from "./mockData";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import {
-  Camera,
-  Lightbulb,
-  Cpu,
-  Activity,
-  Wifi,
-  CloudRain,
-  Sun,
-  Cloud,
-  User,
-} from "lucide-react";
-
-const COLORS = ["#3b82f6", "#ef4444"];
-
-// Helper component for weather icons
-const WeatherIcon = ({ condition }) => {
-  if (condition === "Rainy")
-    return <CloudRain size={16} className="text-blue-500" />;
-  if (condition === "Sunny")
-    return <Sun size={16} className="text-yellow-500" />;
-  return <Cloud size={16} className="text-gray-400" />;
-};
+import { fetchDashboardData } from "../services/api";
+import { Activity, User } from "lucide-react";
+import ImageModal from "./ImageModal";
+import EventsTable from "./EventsTable";
+import CrosswalkCard from "./CrosswalkCard";
+import StatsChart from "./StatsChart";
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
-    const fetchData = () => {
-      getDashboardData()
-        .then((response) => {
-          setData(response);
-          setLoading(false);
-        })
-        .catch((error) => console.error("Error:", error));
+    const fetchData = async () => {
+      try {
+        const response = await fetchDashboardData();
+        setData(response);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -52,6 +37,12 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-10">
+      {/* Image Modal */}
+      <ImageModal
+        imageUrl={selectedImage}
+        onClose={() => setSelectedImage(null)}
+      />
+
       {/* --- HEADER --- */}
       <header className="bg-white shadow-sm p-4 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
@@ -89,76 +80,7 @@ const Dashboard = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data.crosswalks.map((cw) => (
-              <div
-                key={cw.id}
-                className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-800">
-                      {cw.name}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
-                        <Wifi
-                          size={12}
-                          className={
-                            cw.network.signal === "Weak"
-                              ? "text-red-500"
-                              : "text-green-600"
-                          }
-                        />
-                        <span>{cw.network.ping}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
-                        <WeatherIcon condition={cw.environment.weather} />
-                        <span>{cw.environment.temp}°C</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                      cw.status === "active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {cw.status}
-                  </span>
-                </div>
-
-                <hr className="border-gray-100" />
-
-                <div className="flex gap-4 text-sm text-gray-500 justify-around">
-                  <div
-                    className={`flex flex-col items-center gap-1 ${
-                      cw.hardware.camera ? "text-blue-600" : "text-gray-300"
-                    }`}
-                  >
-                    <Camera size={20} />{" "}
-                    <span className="text-[10px] font-bold">CAM</span>
-                  </div>
-                  <div
-                    className={`flex flex-col items-center gap-1 ${
-                      cw.hardware.ledPanel ? "text-yellow-500" : "text-gray-300"
-                    }`}
-                  >
-                    <Lightbulb size={20} />{" "}
-                    <span className="text-[10px] font-bold">LED</span>
-                  </div>
-                  <div
-                    className={`flex flex-col items-center gap-1 ${
-                      cw.hardware.controller
-                        ? "text-purple-600"
-                        : "text-gray-300"
-                    }`}
-                  >
-                    <Cpu size={20} />{" "}
-                    <span className="text-[10px] font-bold">CPU</span>
-                  </div>
-                </div>
-              </div>
+              <CrosswalkCard key={cw.id} crosswalk={cw} />
             ))}
           </div>
         </section>
@@ -166,95 +88,13 @@ const Dashboard = () => {
         {/* --- MAIN GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Events Table */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-              <h2 className="font-bold text-gray-700">Real-time Events</h2>
-              <span className="text-xs text-gray-400">Live Feed</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
-                  <tr>
-                    <th className="p-3">Time</th>
-                    <th className="p-3">Type</th>
-                    {/* RESTORED COUNT COLUMN */}
-                    <th className="p-3">Count</th>
-                    <th className="p-3">Location</th>
-                    <th className="p-3 hidden md:table-cell">Distance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data.recentEvents.map((event) => (
-                    <tr
-                      key={event.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="p-3 font-mono text-blue-600">
-                        {event.time}
-                      </td>
-                      <td className="p-3 font-medium">{event.type}</td>
-                      {/* DISPLAY COUNT VALUE */}
-                      <td className="p-3 font-bold text-gray-800">
-                        {event.objectsCount}
-                      </td>
-                      <td className="p-3 text-gray-600 truncate max-w-[100px]">
-                        {event.location}
-                      </td>
-                      <td className="p-3 hidden md:table-cell">
-                        {event.distance}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <EventsTable
+            events={data.recentEvents}
+            onImageClick={setSelectedImage}
+          />
 
           {/* Stats Chart */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-            <h2 className="font-bold text-gray-700 mb-2 w-full text-center">
-              Efficiency Stats
-            </h2>
-            <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.stats}
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {data.stats.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="w-full mt-2 space-y-2">
-              <div className="flex justify-between text-xs border-b border-gray-100 pb-1">
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>{" "}
-                  Passive Detection
-                </span>
-                <span className="font-bold">{data.stats[0].value}%</span>
-              </div>
-              <div className="flex justify-between text-xs pt-1">
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div> Active
-                  Alerts
-                </span>
-                <span className="font-bold">{data.stats[1].value}%</span>
-              </div>
-            </div>
-          </div>
+          <StatsChart stats={data.stats} />
         </div>
       </div>
     </div>
