@@ -87,6 +87,13 @@ const EventsTable = ({ events, onImageClick }) => {
                 </td>
               </tr>
             ))}
+            {events.length === 0 && (
+              <tr>
+                <td className="p-4 text-center text-gray-500 text-sm" colSpan={8}>
+                  No alerts yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
