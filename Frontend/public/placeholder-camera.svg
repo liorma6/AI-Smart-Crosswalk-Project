@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#e5e7eb"/>
+  <g transform="translate(200,150)">
+    <circle cx="0" cy="-10" r="40" fill="#9ca3af" opacity="0.5"/>
+    <rect x="-30" y="10" width="60" height="40" rx="5" fill="#9ca3af" opacity="0.5"/>
+    <circle cx="0" cy="-10" r="15" fill="#6b7280"/>
+    <text x="0" y="70" font-family="Arial, sans-serif" font-size="14" fill="#6b7280" text-anchor="middle">
+      Camera Feed
+    </text>
+  </g>
+</svg>

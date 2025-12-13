@@ -1,3 +1,35 @@
+/* Leaflet Map Styles */
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mobile Responsiveness Fixes */
+@layer base {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Ensure Leaflet maps don't overflow on mobile */
+  .leaflet-container {
+    max-width: 100%;
+    z-index: 1 !important;
+  }
+
+  /* Fix for leaflet attribution overflow */
+  .leaflet-bottom.leaflet-right {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  /* Ensure leaflet pane doesn't cover modals */
+  .leaflet-pane {
+    z-index: 1 !important;
+  }
+
+  .leaflet-tile-pane {
+    z-index: 1 !important;
+  }
+}

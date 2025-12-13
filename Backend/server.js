@@ -1,20 +1,26 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import connectDB from './config/db.js'; // Import DB Connection
 import crosswalkRoutes from './routes/crosswalkRoutes.js'; // Import Routes
 import alertRoutes from './routes/alertRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 // Config
 dotenv.config();
 connectDB(); // Execute DB Connection
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(cors()); // Enable CORS for all origins
 app.use(express.json());
 
 // Routes Mounting
+// Dashboard route (Frontend uses /api/dashboard)
+app.use('/api/dashboard', dashboardRoutes);
+
 // Requests to /crosswalks will be handled by crosswalkRoutes
 app.use('/crosswalks', crosswalkRoutes);
 
