@@ -1,5 +1,5 @@
-// API Base URL - will use proxy in development
-const API_BASE_URL = '/api';
+// API Base URL - relative so Vite proxy can forward to the backend
+const API_BASE_URL = "";
 
 /**
  * Helper function to get full image URL
@@ -25,25 +25,8 @@ export const getImageUrl = (imageUrl) => {
 };
 
 /**
- * Fetch dashboard data from backend
- * GET /api/dashboard
- */
-export const fetchDashboardData = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/dashboard`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    throw error;
-  }
-};
-
-/**
  * Fetch all crosswalks
- * GET /api/crosswalks
+ * GET /crosswalks
  */
 export const fetchCrosswalks = async () => {
   try {
@@ -59,29 +42,12 @@ export const fetchCrosswalks = async () => {
 };
 
 /**
- * Fetch alerts for a specific crosswalk
- * GET /api/crosswalks/:id/alerts
- */
-export const fetchCrosswalkAlerts = async (crosswalkId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/crosswalks/${crosswalkId}/alerts`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(`Error fetching alerts for crosswalk ${crosswalkId}:`, error);
-    throw error;
-  }
-};
-
-/**
  * Fetch all recent alerts
- * GET /api/alerts
+ * GET /alerts
  */
-export const fetchAlerts = async (limit = 10) => {
+export const fetchAlerts = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/alerts?limit=${limit}`);
+    const response = await fetch(`${API_BASE_URL}/alerts`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -93,12 +59,29 @@ export const fetchAlerts = async (limit = 10) => {
 };
 
 /**
+ * Fetch alerts for a specific crosswalk
+ * GET /alerts/crosswalk/:id
+ */
+export const fetchAlertsByCrosswalk = async (crosswalkId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/alerts/crosswalk/${crosswalkId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching alerts for crosswalk ${crosswalkId}:`, error);
+    throw error;
+  }
+};
+
+/**
  * Create a new alert
- * POST /api/alerts
+ * POST /ai/alerts
  */
 export const createAlert = async (alertData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/alerts`, {
+    const response = await fetch(`${API_BASE_URL}/ai/alerts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -111,25 +94,6 @@ export const createAlert = async (alertData) => {
     return await response.json();
   } catch (error) {
     console.error('Error creating alert:', error);
-    throw error;
-  }
-};
-
-/**
- * Activate LED for a crosswalk
- * POST /api/crosswalks/:id/led/activate
- */
-export const activateLED = async (crosswalkId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/crosswalks/${crosswalkId}/led/activate`, {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(`Error activating LED for crosswalk ${crosswalkId}:`, error);
     throw error;
   }
 };

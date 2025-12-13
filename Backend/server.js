@@ -1,10 +1,9 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import connectDB from './config/db.js'; // Import DB Connection
-import crosswalkRoutes from './routes/crosswalkRoutes.js'; // Import Routes
-import alertRoutes from './routes/alertRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import connectDB from "./config/db.js"; // Import DB Connection
+import crosswalkRoutes from "./routes/crosswalkRoutes.js"; // Import Routes
+import alertRoutes from "./routes/alertRoutes.js";
 
 // Config
 dotenv.config();
@@ -18,21 +17,18 @@ app.use(cors()); // Enable CORS for all origins
 app.use(express.json());
 
 // Routes Mounting
-// Dashboard route (Frontend uses /api/dashboard)
-app.use('/api/dashboard', dashboardRoutes);
-
 // Requests to /crosswalks will be handled by crosswalkRoutes
-app.use('/crosswalks', crosswalkRoutes);
+app.use("/crosswalks", crosswalkRoutes);
 
 // Requests to /ai/alerts or /alerts will be handled by alertRoutes
 // Note: In alertRoutes we used '/' so here we need to be careful with paths OR adjust the router.
 // Let's use specific mounting for clarity:
-app.use('/ai/alerts', alertRoutes); // For POST (AI)
-app.use('/alerts', alertRoutes);    // For GET (Dashboard)
+app.use("/ai/alerts", alertRoutes); // For POST (AI)
+app.use("/alerts", alertRoutes); // For GET (Dashboard)
 
 // Base Route
-app.get('/', (req, res) => {
-  res.send('AI Smart Crosswalk Backend is Running (Refactored Structure).');
+app.get("/", (req, res) => {
+  res.send("AI Smart Crosswalk Backend is Running (Refactored Structure).");
 });
 
 // Start Server

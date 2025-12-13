@@ -6,7 +6,15 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
+      '/crosswalks': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/alerts': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/ai': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       }
