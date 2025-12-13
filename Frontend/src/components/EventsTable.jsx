@@ -23,7 +23,7 @@ const EventsTable = ({ events, onImageClick }) => {
             <tr>
               <th className="p-3">Event</th>
               <th className="p-3">Time</th>
-              <th className="p-3">Type</th>
+              <th className="p-3">Description</th>
               <th className="p-3">Count</th>
               <th className="p-3 hidden md:table-cell">Location</th>
               <th className="p-3 hidden md:table-cell">Distance</th>
@@ -60,7 +60,7 @@ const EventsTable = ({ events, onImageClick }) => {
                   </div>
                 </td>
                 <td className="p-3 font-mono text-blue-600">{event.time}</td>
-                <td className="p-3 font-medium capitalize">
+                <td className="p-3 font-medium">
                   <span
                     className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-semibold ${
                       event.isHazard
@@ -68,7 +68,7 @@ const EventsTable = ({ events, onImageClick }) => {
                         : "bg-emerald-50 text-emerald-700"
                     }`}
                   >
-                    {event.type}
+                    {event.description || event.type}
                   </span>
                 </td>
                 <td className="p-3 font-bold text-gray-800">
