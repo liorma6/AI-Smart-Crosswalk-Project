@@ -17,6 +17,56 @@ const CrosswalksList = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Hebrew to English transliteration with multiple variations
+  const transliterateHebrewToEnglish = (hebrewText) => {
+    // Create a regex pattern that matches Hebrew characters flexibly
+    // KEY INSIGHT: English transliterations often ADD vowels not in Hebrew
+    let pattern = hebrewText.split('').map((char, index) => {
+      let base = '';
+      switch(char) {
+        case 'א': base = '[ae]?'; break;
+        case 'ב': base = '[bv]'; break;  // ב can be b or v
+        case 'ג': base = 'g'; break;
+        case 'ד': base = 'd'; break;
+        case 'ה': base = 'h?'; break;
+        case 'ו': base = '[ouvw]?'; break;  // ו can be o, u, v, w, or silent
+        case 'ז': base = 'z'; break;
+        case 'ח': base = '(h|ch)'; break;
+        case 'ט': base = 't'; break;
+        case 'י': base = '[iye]?'; break;
+        case 'כ': case 'ך': base = '[kc]'; break;
+        case 'ל': base = 'l'; break;
+        case 'מ': case 'ם': base = 'm'; break;
+        case 'נ': case 'ן': base = 'n'; break;
+        case 'ס': base = 's'; break;
+        case 'ע': base = '[ae]?'; break;
+        case 'פ': case 'ף': base = '[pf]'; break;
+        case 'צ': base = '(ts|tz|z)'; break;
+        case 'ק': base = '[kq]'; break;
+        case 'ר': base = 'r'; break;
+        case 'ש': base = '(s|sh)'; break;
+        case 'ת': base = 't'; break;
+        case ' ': return '\\s*';
+        default: return char;
+      }
+      
+      // Add optional vowel after consonants (except last char)
+      // This handles cases like לבון → lavon (a is inserted)
+      if (index < hebrewText.length - 1) {
+        base += '[aeiou]?';
+      }
+      
+      return base;
+    }).join('');
+    
+    try {
+      return new RegExp(pattern, 'i');
+    } catch (e) {
+      console.error('Regex creation failed:', e);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (crosswalks) {
       setFilteredCrosswalks(crosswalks);
@@ -30,12 +80,30 @@ const CrosswalksList = () => {
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
+      const hebrewRegex = transliterateHebrewToEnglish(searchQuery); // Use original (not lowercase) for Hebrew detection
+      
       filtered = filtered.filter(crosswalk => {
         const name = crosswalk.name?.toLowerCase() || '';
         const status = crosswalk.status?.toLowerCase() || '';
         const id = crosswalk._id?.toLowerCase() || '';
+        const address = crosswalk.location?.address?.toLowerCase() || '';
+        const coordinates = `${crosswalk.location?.lat || ''} ${crosswalk.location?.lng || ''}`.toLowerCase();
         
-        return name.includes(query) || status.includes(query) || id.includes(query);
+        // Check original query (English or Hebrew literal)
+        const matchesLiteral = name.includes(query) || 
+                               status.includes(query) || 
+                               id.includes(query) || 
+                               address.includes(query) ||
+                               coordinates.includes(query);
+        
+        // Check Hebrew-to-English regex match
+        const nameMatchRegex = hebrewRegex ? hebrewRegex.test(name) : false;
+        const addressMatchRegex = hebrewRegex ? hebrewRegex.test(address) : false;
+        const matchesRegex = nameMatchRegex || addressMatchRegex;
+        
+        const finalMatch = matchesLiteral || matchesRegex;
+        
+        return finalMatch;
       });
     }
 
@@ -170,7 +238,7 @@ const CrosswalksList = () => {
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
               <input
                 type="text"
-                placeholder="חפש לפי שם רחוב, כתובת, מזהה או סטטוס..."
+                placeholder="חפש לפי רחוב, עיר, כתובת, שם, מזהה או סטטוס..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pr-12 pl-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right transition text-gray-900 placeholder-gray-500"
