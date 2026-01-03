@@ -1,6 +1,7 @@
 import React from "react";
 import { Lightbulb, Link as LinkIcon, MapPin } from "lucide-react";
 import MiniMap from "./MiniMap";
+import CameraStatus from "./CameraStatus";
 
 const CrosswalkCard = ({ crosswalk }) => {
   const status = crosswalk.status || "unknown";
@@ -31,11 +32,14 @@ const CrosswalkCard = ({ crosswalk }) => {
           )}
         </div>
 
-        <span
-          className={`px-2 py-1 rounded text-xs font-bold uppercase ${statusStyles[status] || statusStyles.default}`}
-        >
-          {status}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={`px-2 py-1 rounded text-xs font-bold uppercase ${statusStyles[status] || statusStyles.default}`}
+          >
+            {status}
+          </span>
+          <CameraStatus status={status} size="sm" showLabel={false} />
+        </div>
       </div>
 
       {crosswalk.location && (
