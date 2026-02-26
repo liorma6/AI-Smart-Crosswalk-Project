@@ -16,6 +16,10 @@ def run_analysis():
     input_dir = os.path.join(base_dir, 'test_images')
     output_dir = os.path.join(base_dir, 'output_images')
 
+    # וודא שתיקיית הפלט קיימת למקרה שנמחקה
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     # Track processed files to avoid redundant analysis 
     analyzed_files = set()
 
@@ -28,7 +32,7 @@ def run_analysis():
         for file_name in files:
             img_path = os.path.join(input_dir, file_name)
             img = cv2.imread(img_path) # Load the image using OpenCV
-            if img is None: # If the image fails to load, skip processing and move to the next file
+            if img is None: # If the image fails to load, skip processing
                 continue
 
             # we save a temporary standard JPG to ensure compatibility.
@@ -43,7 +47,7 @@ def run_analysis():
             
             # Extract bounding boxes and filter by class and confidence
             for box in results[0].boxes:
-                conf = float(box.conf[0]) # Confidence score for the detection, between 0 and 1
+                conf = float(box.conf[0]) 
                 cls = int(box.cls) 
                 label = model.names[cls]
                 
@@ -54,7 +58,6 @@ def run_analysis():
                     people_found += 1
 
             # Danger assessment logic (Simplified: Person + Car = Danger)
-            # We simply check if our filtered lists contain at least one of each
             is_dangerous = people_found > 0 and cars_found > 0
 
             # 4. Visual Feedback
@@ -72,14 +75,19 @@ def run_analysis():
             cv2.putText(annotated_frame, status_text, (20, 40), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
             
+            # --- תיקון שם הקובץ ומניעת סיומת כפולה ---
+            # מנקים רווחים ומורידים את הסיומת המקורית לפני הוספת ה-.jpg
+            clean_base_name = os.path.splitext(file_name)[0].replace(" ", "_")
+            final_file_name = f"analyzed_{clean_base_name}.jpg"
+            
             # Save the analyzed image to the output folder
-            out_path = os.path.join(output_dir, f"analyzed_{file_name}.jpg")
+            out_path = os.path.join(output_dir, final_file_name)
             cv2.imwrite(out_path, annotated_frame)
             
             # Output results as JSON for the Node.js backend
             result_json = {
                 "event": "ANALYSIS_COMPLETE",
-                "file": file_name,
+                "file": final_file_name, # שולחים את השם הסופי והנקי
                 "is_dangerous": is_dangerous,
                 "person_found": people_found > 0,
                 "car_found_high_conf": cars_found > 0,
