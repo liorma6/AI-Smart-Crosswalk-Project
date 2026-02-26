@@ -25,18 +25,21 @@ const seedData = async () => {
     // Creating static location data to serve as references for the alerts
     const crosswalks = await Crosswalk.insertMany([
       {
+        _id: "699f27d6b6cae8b2c7d16400", // Static ID for testing purposes
         name: "Holon, Sokolov 48",
         location: { lat: 32.022759561386, lng: 34.774537635844844 },
         status: "active",
         ledSystemUrl: "http://192.168.1.10",
       },
       {
+        _id: "699f27d6b6cae8b2c7d16500",
         name: "Holon, Shenkar 12",
         location: { lat: 32.027086, lng: 34.77686 },
         status: "active",
         ledSystemUrl: "http://192.168.1.11",
       },
       {
+        _id: "699f27d6b6cae8b2c7d16600",
         name: "Holon, Pinhas Lavon 2",
         location: { lat: 32.00829660858082, lng: 34.768726723908145 },
         status: "maintenance",
