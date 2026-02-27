@@ -17,6 +17,10 @@ export default defineConfig({
       '/ai': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+      },
+      '/output_images': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
       }
     }
   }

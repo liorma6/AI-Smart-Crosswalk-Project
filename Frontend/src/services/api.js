@@ -1,5 +1,19 @@
-// API Base URL - relative so Vite proxy can forward to the backend
-const API_BASE_URL = "";
+// API base URL.
+// In development, leave VITE_API_BASE_URL empty to use Vite proxy.
+// In production, set VITE_API_BASE_URL to your backend origin (e.g. https://api.example.com).
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+const getBackendOrigin = () => {
+  if (API_BASE_URL) {
+    try {
+      return new URL(API_BASE_URL, window.location.origin).origin;
+    } catch {
+      return API_BASE_URL;
+    }
+  }
+
+  return window.location.origin;
+};
 
 /**
  * Helper function to get full image URL
@@ -18,10 +32,8 @@ export const getImageUrl = (imageUrl) => {
     return imageUrl;
   }
 
-  // Convert relative path to backend URL
-  // Remove leading slash if present
   const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
-  return `http://localhost:3000/${cleanPath}`;
+  return `${getBackendOrigin()}/${cleanPath}`;
 };
 
 /**

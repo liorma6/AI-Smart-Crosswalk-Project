@@ -35,9 +35,10 @@ console.log(`[Server] Serving static files from: ${imagesPath}`);
 // Function to initialize and monitor the Python AI service
 const startAIEngine = () => {
     console.log("Start Initializing AI Engine...");
+    const pythonCmd = process.env.PYTHON_PATH || "python3";
 
     // Start Python process - (ensures yolo_service.py is running)
-    const pythonProcess = spawn("python", ["./ai_engine/yolo_service.py"]);
+    const pythonProcess = spawn(pythonCmd, ["./ai_engine/yolo_service.py"]);
 
     // Listen for data output from the Python script (JSON format)
     pythonProcess.stdout.on("data", async (data) => {
@@ -83,6 +84,18 @@ const startAIEngine = () => {
     // Handle potential errors in the Python process
     pythonProcess.stderr.on("data", (data) => {
         console.error(`AI Engine stderr: ${data}`);
+    });
+
+    // Prevent backend crash if Python executable is missing
+    pythonProcess.on("error", (error) => {
+        if (error.code === "ENOENT") {
+            console.error(
+                `AI Engine failed to start: '${pythonCmd}' was not found. ` +
+                "Set PYTHON_PATH in Backend/.env (e.g. PYTHON_PATH=python3)."
+            );
+            return;
+        }
+        console.error("AI Engine process error:", error);
     });
 
     // Automatically restart engine if it crashes
