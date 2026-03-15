@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchCrosswalks, fetchAlerts, getImageUrl } from '../services/api';
 import { ArrowLeft, MapPin, Calendar, AlertTriangle, Image as ImageIcon, Activity, Filter, X } from 'lucide-react';
@@ -11,7 +11,6 @@ const CrosswalkDetails = () => {
   const navigate = useNavigate();
   const [crosswalk, setCrosswalk] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  const [filteredAlerts, setFilteredAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -48,7 +47,6 @@ const CrosswalkDetails = () => {
         }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         setAlerts(crosswalkAlerts);
-        setFilteredAlerts(crosswalkAlerts);
         setError(null);
       } catch (err) {
         setError('שגיאה בטעינת הנתונים');
@@ -61,13 +59,12 @@ const CrosswalkDetails = () => {
     loadData();
   }, [id]);
 
-  useEffect(() => {
+  const filteredAlerts = useMemo(() => {
     if (!dateFilter.enabled || (!dateFilter.startDate && !dateFilter.endDate)) {
-      setFilteredAlerts(alerts);
-      return;
+      return alerts;
     }
 
-    const filtered = alerts.filter(alert => {
+    return alerts.filter(alert => {
       const alertDate = new Date(alert.timestamp);
       
       if (dateFilter.startDate && dateFilter.endDate) {
@@ -86,18 +83,7 @@ const CrosswalkDetails = () => {
       
       return true;
     });
-
-    setFilteredAlerts(filtered);
   }, [dateFilter, alerts]);
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'maintenance': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'inactive': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   const getStatusText = (status) => {
     switch(status) {
