@@ -1,4 +1,10 @@
 import express from 'express';
+import { isDatabaseReady } from '../config/db.js';
+import {
+  addFallbackCrosswalk,
+  getFallbackCrosswalkById,
+  getFallbackCrosswalks,
+} from '../data/fallbackData.js';
 import Crosswalk from '../models/Crosswalk.js'; // Import the model
 
 const router = express.Router();
@@ -6,6 +12,11 @@ const router = express.Router();
 // POST /api/crosswalks
 router.post('/', async (req, res) => {
   try {
+    if (!isDatabaseReady()) {
+      const saved = addFallbackCrosswalk(req.body);
+      return res.status(201).json(saved);
+    }
+
     const newCrosswalk = new Crosswalk(req.body);
     const saved = await newCrosswalk.save();
     res.status(201).json(saved);
@@ -17,6 +28,10 @@ router.post('/', async (req, res) => {
 // GET /api/crosswalks
 router.get('/', async (req, res) => {
   try {
+    if (!isDatabaseReady()) {
+      return res.status(200).json(getFallbackCrosswalks());
+    }
+
     const crosswalks = await Crosswalk.find();
     res.status(200).json(crosswalks);
   } catch (error) {
@@ -26,6 +41,16 @@ router.get('/', async (req, res) => {
 // GET /crosswalks/:id
 router.get('/:id', async (req, res) => {
   try {
+    if (!isDatabaseReady()) {
+      const fallbackCrosswalk = getFallbackCrosswalkById(req.params.id);
+
+      if (!fallbackCrosswalk) {
+        return res.status(404).json({ message: 'Crosswalk not found' });
+      }
+
+      return res.status(200).json(fallbackCrosswalk);
+    }
+
     // We use 'req.params.id' to get the ID from the URL
     const crosswalk = await Crosswalk.findById(req.params.id);
     

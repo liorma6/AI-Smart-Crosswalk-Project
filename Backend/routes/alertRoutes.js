@@ -1,4 +1,6 @@
 import express from "express";
+import { isDatabaseReady } from "../config/db.js";
+import { addFallbackAlert, getFallbackAlerts } from "../data/fallbackData.js";
 import Alert from "../models/Alert.js"; // Import the model
 
 const router = express.Router();
@@ -58,6 +60,20 @@ router.post("/", async (req, res) => {
       ledActivated,
     } = req.body;
 
+    if (!isDatabaseReady()) {
+      const savedAlert = addFallbackAlert({
+        crosswalkId,
+        imageUrl,
+        description,
+        detectionDistance,
+        detectedObjectsCount,
+        ledActivated,
+      });
+
+      console.log(`[ALERT LOGGED][fallback] Crosswalk ID: ${crosswalkId}`);
+      return res.status(201).json(savedAlert);
+    }
+
     const newAlert = new Alert({
       crosswalkId,
       imageUrl,
@@ -80,6 +96,10 @@ router.post("/", async (req, res) => {
 // GET /api/alerts
 router.get("/", async (req, res) => {
   try {
+    if (!isDatabaseReady()) {
+      return res.status(200).json(getFallbackAlerts());
+    }
+
     const alerts = await Alert.find()
       .populate("crosswalkId")
       .sort({ timestamp: -1 });
@@ -92,6 +112,12 @@ router.get("/", async (req, res) => {
 // GET /alerts/crosswalk/:id - Get all alerts belonging to a specific crosswalk
 router.get("/crosswalk/:id", async (req, res) => {
   try {
+    if (!isDatabaseReady()) {
+      return res.status(200).json(
+        getFallbackAlerts({ crosswalkId: req.params.id }),
+      );
+    }
+
     // Find alerts where 'crosswalkId' matches the ID in the URL
     const alerts = await Alert.find({ crosswalkId: req.params.id })
       .populate("crosswalkId")

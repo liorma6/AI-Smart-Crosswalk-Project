@@ -3,12 +3,14 @@ import dotenv from "dotenv"; // For loading environment variables from .env file
 import cors from "cors"; // Middleware to enable CORS (Cross-Origin Resource Sharing)
 import { spawn } from "child_process"; // For Python AI Engine Integration
 import connectDB from "./config/db.js"; // Database Connection
+import { isDatabaseReady } from "./config/db.js";
 import crosswalkRoutes from "./routes/crosswalkRoutes.js"; // Crosswalk API Routes
 import alertRoutes from "./routes/alertRoutes.js"; // Alert API Routes
 import Alert from "./models/Alert.js"; // Alert Model for Database Interaction
 import path from "path"; // For handling file paths in a way that works across different operating systems
 import { fileURLToPath } from "url"; // To get __dirname in ES modules
 import cloudinary from "./config/cloudinary.js"; // Cloudinary integration
+import { addFallbackAlert } from "./data/fallbackData.js";
 import { createServer } from "http"; // Required for Socket.io to wrap express
 import { Server } from "socket.io"; // Real-time engine
 
@@ -16,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config(); // Load environment variables from .env file
-connectDB(); // Execute DB Connection
+await connectDB(); // Execute DB Connection
 
 const app = express();
 const httpServer = createServer(app); // Create an HTTP server from the express app
@@ -90,7 +92,7 @@ const startAIEngine = () => {
               );
 
               // Create a new Alert document based on your Schema
-              const newAlert = new Alert({
+              const alertPayload = {
                 // Placeholder ID - In a real scenario, this would match a specific camera/location
                 crosswalkId: "699f27d6b6cae8b2c7d16400", // Example ObjectId
                 // Use the secure URL from Cloudinary instead of localhost
@@ -104,18 +106,27 @@ const startAIEngine = () => {
                 ledActivated: true,
                 detectedObjectsCount: message.person_count || 0, // Save the count of detected people (if provided by AI)
                 timestamp: new Date(),
-              });
+              };
 
-              const savedAlert = await newAlert.save();
+              let populatedAlert;
 
-              // Populate the crosswalkId reference to get full crosswalk details (Location, Name, etc.)
-              const populatedAlert = await Alert.findById(
-                savedAlert._id,
-              ).populate("crosswalkId");
+              if (isDatabaseReady()) {
+                const newAlert = new Alert(alertPayload);
+                const savedAlert = await newAlert.save();
 
-              console.log(
-                "Alert saved successfully to MongoDB with Cloudinary URL.",
-              );
+                // Populate the crosswalkId reference to get full crosswalk details (Location, Name, etc.)
+                populatedAlert = await Alert.findById(savedAlert._id).populate(
+                  "crosswalkId",
+                );
+                console.log(
+                  "Alert saved successfully to MongoDB with Cloudinary URL.",
+                );
+              } else {
+                populatedAlert = addFallbackAlert(alertPayload);
+                console.log(
+                  "MongoDB unavailable. Alert stored in fallback memory store.",
+                );
+              }
 
               // --- REAL-TIME NOTIFICATION ---
               // Notify all connected clients about the new hazard in real-time

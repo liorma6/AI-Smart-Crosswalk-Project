@@ -1,203 +1,438 @@
-import React, { useState, useEffect } from 'react';
-import { fetchCrosswalks, fetchAlerts } from '../services/api';
-import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, AlertTriangle, Activity, Camera, Calendar } from 'lucide-react';
-import { SkeletonStats, SkeletonChart } from '../components/SkeletonLoader';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  Calendar,
+  Camera,
+  TrendingUp,
+} from "lucide-react";
+import { SkeletonChart, SkeletonStats } from "../components/SkeletonLoader";
+import { fetchAlerts, fetchCrosswalks } from "../services/api";
+
+const FILTER_RANGES = {
+  day: 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  month: 30 * 24 * 60 * 60 * 1000,
+  all: Infinity,
+};
+
+const PIE_COLORS = ["#2563eb", "#dc2626", "#f59e0b", "#10b981"];
 
 const Statistics = () => {
   const [crosswalks, setCrosswalks] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('week');
+  const [error, setError] = useState(null);
+  const [timeRange, setTimeRange] = useState("week");
+  const [selectedCrosswalk, setSelectedCrosswalk] = useState("all");
+  const [alertFilter, setAlertFilter] = useState("all");
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const [crosswalksData, alertsData] = await Promise.all([
           fetchCrosswalks(),
-          fetchAlerts()
+          fetchAlerts(),
         ]);
         setCrosswalks(crosswalksData || []);
         setAlerts(alertsData || []);
+        setError(null);
       } catch (err) {
         console.error(err);
+        setError(err.message || "Failed to load statistics.");
       } finally {
         setLoading(false);
       }
     };
+
     loadData();
   }, []);
 
-  const statusData = [
-    { name: 'פעיל', value: crosswalks.filter(c => c.status === 'active').length, color: '#10b981' },
-    { name: 'תחזוקה', value: crosswalks.filter(c => c.status === 'maintenance').length, color: '#f59e0b' },
-    { name: 'לא פעיל', value: crosswalks.filter(c => c.status === 'inactive').length, color: '#ef4444' }
-  ];
+  const filteredAlerts = useMemo(() => {
+    const now = Date.now();
 
-  const hazardData = [
-    { name: 'סכנה גבוהה', value: alerts.filter(a => a.isHazard).length, color: '#dc2626' },
-    { name: 'אזהרה', value: alerts.filter(a => !a.isHazard).length, color: '#f59e0b' }
-  ];
+    return alerts.filter((alert) => {
+      const timestamp = new Date(alert.timestamp).getTime();
+      const crosswalkId =
+        typeof alert.crosswalkId === "object"
+          ? alert.crosswalkId?._id
+          : alert.crosswalkId;
 
-  const ledActivationData = [
-    { name: 'LED הופעל', value: alerts.filter(a => a.ledActivated).length, color: '#3b82f6' },
-    { name: 'זיהוי בלבד', value: alerts.filter(a => !a.ledActivated).length, color: '#6b7280' }
-  ];
+      const matchesRange =
+        timeRange === "all"
+          ? true
+          : Number.isFinite(timestamp) && now - timestamp <= FILTER_RANGES[timeRange];
 
-  const alertsByCrosswalk = crosswalks.map(crosswalk => {
-    const crosswalkAlerts = alerts.filter(alert => {
-      const alertCrosswalkId = typeof alert.crosswalkId === 'object' 
-        ? alert.crosswalkId._id 
-        : alert.crosswalkId;
-      return alertCrosswalkId === crosswalk._id;
+      const matchesCrosswalk =
+        selectedCrosswalk === "all" || crosswalkId === selectedCrosswalk;
+
+      const matchesAlertType =
+        alertFilter === "all"
+          ? true
+          : alertFilter === "hazard"
+            ? Boolean(alert.isHazard)
+            : alertFilter === "led"
+              ? Boolean(alert.ledActivated)
+              : !alert.ledActivated;
+
+      return matchesRange && matchesCrosswalk && matchesAlertType;
     });
-    return {
-      name: crosswalk.name.split(',')[1]?.trim() || crosswalk.name,
-      התרעות: crosswalkAlerts.length,
-      סכנה: crosswalkAlerts.filter(a => a.isHazard).length
-    };
-  }).sort((a, b) => b.התרעות - a.התרעות);
+  }, [alerts, timeRange, selectedCrosswalk, alertFilter]);
 
-  const alertsTimeline = alerts
-    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .reduce((acc, alert) => {
-      const date = new Date(alert.timestamp).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
-      const existing = acc.find(item => item.תאריך === date);
-      if (existing) {
-        existing.התרעות += 1;
-        if (alert.isHazard) existing.סכנה += 1;
-      } else {
-        acc.push({ תאריך: date, התרעות: 1, סכנה: alert.isHazard ? 1 : 0 });
-      }
-      return acc;
-    }, []);
+  const scopedCrosswalks = useMemo(() => {
+    if (selectedCrosswalk === "all") {
+      return crosswalks;
+    }
 
-  const avgDistance = alerts.length > 0
-    ? (alerts.reduce((sum, a) => sum + (a.detectionDistance || 0), 0) / alerts.length).toFixed(2)
+    return crosswalks.filter((crosswalk) => crosswalk._id === selectedCrosswalk);
+  }, [crosswalks, selectedCrosswalk]);
+
+  const statusData = useMemo(
+    () => [
+      {
+        name: "Active",
+        value: scopedCrosswalks.filter((crosswalk) => crosswalk.status === "active")
+          .length,
+        color: "#10b981",
+      },
+      {
+        name: "Maintenance",
+        value: scopedCrosswalks.filter(
+          (crosswalk) => crosswalk.status === "maintenance",
+        ).length,
+        color: "#f59e0b",
+      },
+      {
+        name: "Inactive",
+        value: scopedCrosswalks.filter((crosswalk) => crosswalk.status === "inactive")
+          .length,
+        color: "#ef4444",
+      },
+    ].filter((entry) => entry.value > 0),
+    [scopedCrosswalks],
+  );
+
+  const hazardData = useMemo(
+    () => [
+      {
+        name: "Hazard",
+        value: filteredAlerts.filter((alert) => alert.isHazard).length,
+        color: "#dc2626",
+      },
+      {
+        name: "Warning",
+        value: filteredAlerts.filter((alert) => !alert.isHazard).length,
+        color: "#f59e0b",
+      },
+    ].filter((entry) => entry.value > 0),
+    [filteredAlerts],
+  );
+
+  const ledActivationData = useMemo(
+    () => [
+      {
+        name: "LED activated",
+        value: filteredAlerts.filter((alert) => alert.ledActivated).length,
+        color: "#3b82f6",
+      },
+      {
+        name: "Detection only",
+        value: filteredAlerts.filter((alert) => !alert.ledActivated).length,
+        color: "#64748b",
+      },
+    ].filter((entry) => entry.value > 0),
+    [filteredAlerts],
+  );
+
+  const alertsByCrosswalk = useMemo(
+    () =>
+      scopedCrosswalks
+        .map((crosswalk) => {
+          const crosswalkAlerts = filteredAlerts.filter((alert) => {
+            const alertCrosswalkId =
+              typeof alert.crosswalkId === "object"
+                ? alert.crosswalkId?._id
+                : alert.crosswalkId;
+            return alertCrosswalkId === crosswalk._id;
+          });
+
+          return {
+            name: crosswalk.name.split(",")[1]?.trim() || crosswalk.name,
+            alerts: crosswalkAlerts.length,
+            hazards: crosswalkAlerts.filter((alert) => alert.isHazard).length,
+          };
+        })
+        .sort((left, right) => right.alerts - left.alerts),
+    [filteredAlerts, scopedCrosswalks],
+  );
+
+  const alertsTimeline = useMemo(() => {
+    const labelOptions =
+      timeRange === "day"
+        ? { hour: "2-digit" }
+        : { day: "numeric", month: "short" };
+
+    return [...filteredAlerts]
+      .sort(
+        (left, right) =>
+          new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
+      )
+      .reduce((accumulator, alert) => {
+        const timestamp = new Date(alert.timestamp);
+        const label = timestamp.toLocaleDateString("en-US", labelOptions);
+        const existing = accumulator.find((item) => item.label === label);
+
+        if (existing) {
+          existing.alerts += 1;
+          if (alert.isHazard) {
+            existing.hazards += 1;
+          }
+        } else {
+          accumulator.push({
+            label,
+            alerts: 1,
+            hazards: alert.isHazard ? 1 : 0,
+          });
+        }
+
+        return accumulator;
+      }, []);
+  }, [filteredAlerts, timeRange]);
+
+  const averageDistance = useMemo(() => {
+    if (filteredAlerts.length === 0) {
+      return "0.00";
+    }
+
+    return (
+      filteredAlerts.reduce(
+        (sum, alert) => sum + Number(alert.detectionDistance || 0),
+        0,
+      ) / filteredAlerts.length
+    ).toFixed(2);
+  }, [filteredAlerts]);
+
+  const averageObjects = useMemo(() => {
+    if (filteredAlerts.length === 0) {
+      return "0.0";
+    }
+
+    return (
+      filteredAlerts.reduce(
+        (sum, alert) => sum + Number(alert.detectedObjectsCount || 0),
+        0,
+      ) / filteredAlerts.length
+    ).toFixed(1);
+  }, [filteredAlerts]);
+
+  const ledActivationRate = filteredAlerts.length
+    ? ((filteredAlerts.filter((alert) => alert.ledActivated).length / filteredAlerts.length) * 100).toFixed(0)
     : 0;
 
-  const avgObjects = alerts.length > 0
-    ? (alerts.reduce((sum, a) => sum + (a.detectedObjectsCount || 0), 0) / alerts.length).toFixed(1)
+  const hazardRate = filteredAlerts.length
+    ? ((filteredAlerts.filter((alert) => alert.isHazard).length / filteredAlerts.length) * 100).toFixed(0)
     : 0;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-200 animate-pulse">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="h-8 bg-gray-200 rounded w-48 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-40"></div>
+                <div className="mb-2 h-8 w-48 rounded bg-gray-200"></div>
+                <div className="h-4 w-40 rounded bg-gray-200"></div>
               </div>
               <div className="flex gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-10 w-20 bg-gray-100 rounded-lg"></div>
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-10 w-20 rounded-lg bg-gray-100"></div>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[1, 2, 3, 4].map((i) => (
-              <SkeletonStats key={i} />
+          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+              <SkeletonStats key={item} />
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {[1, 2, 3, 4].map((i) => (
-              <SkeletonChart key={i} />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {[1, 2, 3, 4].map((item) => (
+              <SkeletonChart key={item} />
             ))}
-          </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            <SkeletonChart />
-            <SkeletonChart />
           </div>
         </div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="max-w-md rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 text-rose-600" size={40} />
+          <h1 className="text-xl font-semibold text-slate-900">
+            Statistics are unavailable
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const timeButtons = [
+    { id: "day", label: "24h" },
+    { id: "week", label: "7d" },
+    { id: "month", label: "30d" },
+    { id: "all", label: "All" },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">סטטיסטיקות מערכת</h1>
-              <p className="text-gray-600">ניתוח נתונים וביצועים</p>
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6">
+        <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-2">
+              <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">
+                Statistics
+              </span>
+              <div>
+                <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
+                  Filtered system analytics
+                </h1>
+                <p className="mt-1 max-w-2xl text-sm text-slate-600">
+                  The charts below now respond to the selected time range,
+                  crossing, and alert mode filters.
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTimeRange('day')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  timeRange === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                היום
-              </button>
-              <button
-                onClick={() => setTimeRange('week')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  timeRange === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                שבוע
-              </button>
-              <button
-                onClick={() => setTimeRange('month')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  timeRange === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                חודש
-              </button>
+
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              {timeButtons.map((button) => (
+                <button
+                  key={button.id}
+                  type="button"
+                  onClick={() => setTimeRange(button.id)}
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                    timeRange === button.id
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {button.label}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span>Crossing</span>
+              <select
+                value={selectedCrosswalk}
+                onChange={(event) => setSelectedCrosswalk(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400 focus:bg-white"
+              >
+                <option value="all">All crossings</option>
+                {crosswalks.map((crosswalk) => (
+                  <option key={crosswalk._id} value={crosswalk._id}>
+                    {crosswalk.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span>Alert type</span>
+              <select
+                value={alertFilter}
+                onChange={(event) => setAlertFilter(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400 focus:bg-white"
+              >
+                <option value="all">All events</option>
+                <option value="hazard">Hazards only</option>
+                <option value="led">LED activated</option>
+                <option value="detection">Detection only</option>
+              </select>
+            </label>
+
+            <div className="rounded-2xl bg-slate-50 p-4 lg:self-end">
+              <p className="text-sm font-medium text-slate-700">Active filters</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {timeButtons.find((button) => button.id === timeRange)?.label} window,
+                {" "}
+                {selectedCrosswalk === "all"
+                  ? "all crossings"
+                  : crosswalks.find((crosswalk) => crosswalk._id === selectedCrosswalk)
+                      ?.name || "selected crossing"}
+                , {alertFilter === "all" ? "all events" : alertFilter}.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
               <Activity size={32} />
               <TrendingUp size={24} className="opacity-75" />
             </div>
-            <div className="text-4xl font-bold mb-2">{alerts.length}</div>
-            <div className="text-blue-100 text-sm">סך הכל התרעות</div>
+            <div className="mb-2 text-4xl font-bold">{filteredAlerts.length}</div>
+            <div className="text-sm text-blue-100">Filtered alerts</div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="rounded-xl bg-gradient-to-br from-red-500 to-red-600 p-6 text-white shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
               <AlertTriangle size={32} />
               <TrendingUp size={24} className="opacity-75" />
             </div>
-            <div className="text-4xl font-bold mb-2">{alerts.filter(a => a.isHazard).length}</div>
-            <div className="text-red-100 text-sm">אירועי סכנה</div>
+            <div className="mb-2 text-4xl font-bold">
+              {filteredAlerts.filter((alert) => alert.isHazard).length}
+            </div>
+            <div className="text-sm text-red-100">Hazard events</div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="rounded-xl bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
               <Camera size={32} />
               <Activity size={24} className="opacity-75" />
             </div>
-            <div className="text-4xl font-bold mb-2">{crosswalks.length}</div>
-            <div className="text-green-100 text-sm">מעברי חצייה</div>
+            <div className="mb-2 text-4xl font-bold">{scopedCrosswalks.length}</div>
+            <div className="text-sm text-green-100">Crossings in scope</div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
+          <div className="rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 p-6 text-white shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
               <Calendar size={32} />
               <TrendingUp size={24} className="opacity-75" />
             </div>
-            <div className="text-4xl font-bold mb-2">{avgDistance}m</div>
-            <div className="text-purple-100 text-sm">מרחק ממוצע</div>
+            <div className="mb-2 text-4xl font-bold">{averageDistance}m</div>
+            <div className="text-sm text-purple-100">Average distance</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">סטטוס מעברי חצייה</h3>
+        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Crossing status distribution
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -207,11 +442,10 @@ const Statistics = () => {
                   labelLine={false}
                   label={({ name, value }) => `${name}: ${value}`}
                   outerRadius={100}
-                  fill="#8884d8"
                   dataKey="value"
                 >
                   {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={entry.name} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -219,8 +453,10 @@ const Statistics = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">התפלגות סוגי התרעות</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Hazard vs. warning mix
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -230,11 +466,10 @@ const Statistics = () => {
                   labelLine={false}
                   label={({ name, value }) => `${name}: ${value}`}
                   outerRadius={100}
-                  fill="#8884d8"
                   dataKey="value"
                 >
                   {hazardData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={entry.name} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -242,8 +477,10 @@ const Statistics = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">הפעלת LED</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              LED activation breakdown
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -251,13 +488,14 @@ const Statistics = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ name, value, percent }) =>
+                    `${name}: ${value} (${((percent || 0) * 100).toFixed(0)}%)`
+                  }
                   outerRadius={100}
-                  fill="#8884d8"
                   dataKey="value"
                 >
                   {ledActivationData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={entry.name} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -265,23 +503,27 @@ const Statistics = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">מדדים נוספים</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Filter summary
+            </h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                <span className="text-gray-700 font-medium">ממוצע אובייקטים לאירוע</span>
-                <span className="text-2xl font-bold text-blue-600">{avgObjects}</span>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                <span className="text-gray-700 font-medium">אחוז הפעלת LED</span>
-                <span className="text-2xl font-bold text-green-600">
-                  {alerts.length > 0 ? ((alerts.filter(a => a.ledActivated).length / alerts.length) * 100).toFixed(0) : 0}%
+              <div className="flex items-center justify-between rounded-lg bg-blue-50 p-4">
+                <span className="font-medium text-gray-700">Average objects per event</span>
+                <span className="text-2xl font-bold text-blue-600">
+                  {averageObjects}
                 </span>
               </div>
-              <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                <span className="text-gray-700 font-medium">אחוז אירועי סכנה</span>
+              <div className="flex items-center justify-between rounded-lg bg-green-50 p-4">
+                <span className="font-medium text-gray-700">LED activation rate</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {ledActivationRate}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-red-50 p-4">
+                <span className="font-medium text-gray-700">Hazard rate</span>
                 <span className="text-2xl font-bold text-red-600">
-                  {alerts.length > 0 ? ((alerts.filter(a => a.isHazard).length / alerts.length) * 100).toFixed(0) : 0}%
+                  {hazardRate}%
                 </span>
               </div>
             </div>
@@ -289,32 +531,36 @@ const Statistics = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">התרעות לפי מעבר חצייה</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Alerts by crossing
+            </h3>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={alertsByCrosswalk}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <XAxis dataKey="name" angle={-35} textAnchor="end" height={90} />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="התרעות" fill="#3b82f6" />
-                <Bar dataKey="סכנה" fill="#dc2626" />
+                <Bar dataKey="alerts" fill="#3b82f6" />
+                <Bar dataKey="hazards" fill="#dc2626" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">מגמת התרעות לאורך זמן</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-gray-900">
+              Alert trend over time
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={alertsTimeline}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="תאריך" />
+                <XAxis dataKey="label" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="התרעות" stroke="#3b82f6" strokeWidth={2} />
-                <Line type="monotone" dataKey="סכנה" stroke="#dc2626" strokeWidth={2} />
+                <Line type="monotone" dataKey="alerts" stroke="#3b82f6" strokeWidth={2} />
+                <Line type="monotone" dataKey="hazards" stroke="#dc2626" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -325,4 +571,3 @@ const Statistics = () => {
 };
 
 export default Statistics;
-

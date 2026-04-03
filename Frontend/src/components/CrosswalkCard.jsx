@@ -1,9 +1,14 @@
 import React from "react";
-import { Lightbulb, Link as LinkIcon, MapPin } from "lucide-react";
+import { Lightbulb, Link as LinkIcon, MapPin, Star } from "lucide-react";
 import MiniMap from "./MiniMap";
 import CameraStatus from "./CameraStatus";
 
-const CrosswalkCard = ({ crosswalk }) => {
+const CrosswalkCard = ({
+  crosswalk,
+  isFavorite = false,
+  onToggleFavorite,
+  onViewDetails,
+}) => {
   const status = crosswalk.status || "unknown";
 
   const statusStyles = {
@@ -13,14 +18,35 @@ const CrosswalkCard = ({ crosswalk }) => {
     default: "bg-gray-100 text-gray-700",
   };
 
+  const handleFavoriteToggle = (event) => {
+    event.stopPropagation();
+    onToggleFavorite?.(crosswalk._id);
+  };
+
+  const handleViewDetails = () => {
+    onViewDetails?.(crosswalk._id);
+  };
+
   return (
-    <div className="card p-5 flex flex-col gap-5">
-      <div className="flex justify-between items-start gap-3">
+    <div
+      className={`card flex flex-col gap-5 border p-5 transition ${
+        onViewDetails ? "cursor-pointer hover:-translate-y-0.5" : ""
+      } ${
+        isFavorite
+          ? "border-amber-300 shadow-lg shadow-amber-100/80"
+          : "border-white"
+      }`}
+      onClick={handleViewDetails}
+    >
+      <div className="flex justify-between gap-3">
         <div className="space-y-2">
           <div className="h-1.5 w-12 rounded-full bg-gradient-to-r from-[#f97316] via-[#38bdf8] to-[#22c55e]"></div>
-          <h3 className="font-semibold text-lg text-gray-900 leading-snug">
+          <h3 className="text-lg font-semibold leading-snug text-gray-900">
             {crosswalk.name}
           </h3>
+          <div className="text-xs font-mono text-[var(--muted)]">
+            ID: {crosswalk._id}
+          </div>
           {crosswalk.location && (
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
               <MapPin size={14} />
@@ -33,8 +59,23 @@ const CrosswalkCard = ({ crosswalk }) => {
         </div>
 
         <div className="flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={handleFavoriteToggle}
+            className={`inline-flex items-center justify-center rounded-full border p-2 transition ${
+              isFavorite
+                ? "border-amber-300 bg-amber-50 text-amber-500"
+                : "border-gray-200 bg-white text-gray-400 hover:border-amber-200 hover:text-amber-500"
+            }`}
+            aria-label={isFavorite ? "Remove from watchlist" : "Add to watchlist"}
+            title={isFavorite ? "Remove from watchlist" : "Add to watchlist"}
+          >
+            <Star size={16} className={isFavorite ? "fill-current" : ""} />
+          </button>
           <span
-            className={`px-2 py-1 rounded text-xs font-bold uppercase ${statusStyles[status] || statusStyles.default}`}
+            className={`rounded px-2 py-1 text-xs font-bold uppercase ${
+              statusStyles[status] || statusStyles.default
+            }`}
           >
             {status}
           </span>
@@ -50,7 +91,7 @@ const CrosswalkCard = ({ crosswalk }) => {
         />
       )}
 
-      <div className="flex justify-between items-center text-sm text-gray-600">
+      <div className="flex justify-between gap-3 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <Lightbulb
             size={18}
@@ -61,23 +102,38 @@ const CrosswalkCard = ({ crosswalk }) => {
           </span>
         </div>
 
-        {crosswalk.ledSystemUrl && (
+        {crosswalk.ledSystemUrl ? (
           <a
-            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold"
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
             href={crosswalk.ledSystemUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
           >
             <LinkIcon size={14} />
             LED endpoint
           </a>
-        )}
-        {!crosswalk.ledSystemUrl && (
-          <span className="text-xs text-[var(--muted)] font-medium">
+        ) : (
+          <span className="text-xs font-medium text-[var(--muted)]">
             No LED endpoint provided
           </span>
         )}
       </div>
+
+      {onViewDetails && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleViewDetails();
+            }}
+            className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+          >
+            View details
+          </button>
+        </div>
+      )}
     </div>
   );
 };
