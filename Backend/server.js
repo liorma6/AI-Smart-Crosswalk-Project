@@ -173,6 +173,16 @@ app.get("/", (req, res) => {
   );
 });
 
+/**
+ * Render Keep-Alive Endpoint
+ * Prevents the free tier from sleeping by responding to UptimeRobot pings.
+ */
+app.get('/keep-alive', (req, res) => {
+  // AI-Smart-Crosswalk-Project
+  console.log("Project: AI-Smart-Crosswalk is awake!");
+  res.status(200).send('I am alive');
+});
+
 // Start Server using httpServer to support WebSockets
 httpServer.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
