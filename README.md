@@ -305,16 +305,7 @@ python ai_engine/yolo_service.py
 - In production-oriented flows, alert images can be uploaded to Cloudinary and stored as external URLs.
 - Use `ENABLE_AI_ENGINE=false` when you want to run the backend API without launching the Python worker.
 
----
 
-## 👤 Contact
-
-**Lior Mashiach**
-
-- 📧 Email: [Liorma6@gmail.com](mailto:Liorma6@gmail.com)
-- 💻 GitHub: [github.com/liorma6](https://github.com/liorma6)
-
----
 
 <p align="center">
   Built to make crosswalks smarter, safer, and more responsive through real-time AI.
