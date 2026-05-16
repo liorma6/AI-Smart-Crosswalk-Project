@@ -1,7 +1,6 @@
 import express from "express"; // Web framework for Node.js
 import dotenv from "dotenv"; // For loading environment variables from .env file
 import cors from "cors"; // Middleware to enable CORS (Cross-Origin Resource Sharing)
-import { spawn } from "child_process"; // For Python AI Engine Integration
 import connectDB from "./config/db.js"; // Database Connection
 import { isDatabaseReady } from "./config/db.js";
 import crosswalkRoutes from "./routes/crosswalkRoutes.js"; // Crosswalk API Routes
@@ -9,8 +8,6 @@ import alertRoutes from "./routes/alertRoutes.js"; // Alert API Routes
 import Alert from "./models/Alert.js"; // Alert Model for Database Interaction
 import path from "path"; // For handling file paths in a way that works across different operating systems
 import { fileURLToPath } from "url"; // To get __dirname in ES modules
-import cloudinary from "./config/cloudinary.js"; // Cloudinary integration
-import { addFallbackAlert } from "./data/fallbackData.js";
 import { createServer } from "http"; // Required for Socket.io to wrap express
 import { Server } from "socket.io"; // Real-time engine
 
@@ -28,10 +25,7 @@ const io = new Server(httpServer, {
 });
 
 const PORT = process.env.PORT || 3000; // Default to 3000 if PORT is not set in .env
-const isProduction = process.env.NODE_ENV === "production";
-const shouldStartAIEngine =
-  process.env.ENABLE_AI_ENGINE === "true" ||
-  (!isProduction && process.env.ENABLE_AI_ENGINE !== "false");
+const DEFAULT_CROSSWALK_ID = "699f27d6b6cae8b2c7d16400";
 
 // Middleware Setup
 app.use(cors({ origin: allowedOrigin })); // Enable CORS for the Vercel frontend
@@ -50,120 +44,60 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => console.log("[Socket] Client disconnected"));
 });
 
-// --- AI Engine Integration (Python Bridge) ---
+const buildAlertPayload = (body = {}) => {
+  const detectionDistance =
+    body.detectionDistance ?? body.detection_distance ?? 0;
+  const detectedObjectsCount =
+    body.detectedObjectsCount ?? body.person_count ?? body.objects_count ?? 0;
 
-// Function to initialize and monitor the Python AI service
-const startAIEngine = () => {
-  console.log("Start Initializing AI Engine...");
-
-  // Start Python process to run the YOLO service script
-  const pythonProcess = spawn("python", ["./ai_engine/yolo_service.py"]);
-
-  // Listen for data output from the Python script (JSON format)
-  pythonProcess.stdout.on("data", async (data) => {
-    try {
-      const rawData = data.toString(); // Convert Buffer to String
-
-      // Handle multiple JSON messages or loading logs
-      const lines = rawData.split("\n").filter((line) => line.trim() !== ""); // Split by newlines and ignore empty lines
-
-      for (const line of lines) {
-        const message = JSON.parse(line); // Parse JSON message from Python
-
-        // Check if analysis is complete and a hazard is detected
-        if (message.event === "ANALYSIS_COMPLETE") {
-          console.log(
-            `AI Log: File ${message.file} analyzed. Danger: ${message.is_dangerous}`,
-          );
-
-          if (message.is_dangerous) {
-            console.log("Hazard detected! Creating alert...");
-
-            let imageUrl = null;
-
-            if (message.file) {
-              try {
-                const localFilePath = path.join(imagesPath, message.file);
-                const uploadResponse = await cloudinary.uploader.upload(
-                  localFilePath,
-                  {
-                    folder: "smart_crosswalk_alerts",
-                  },
-                );
-
-                imageUrl = uploadResponse.secure_url;
-                console.log(
-                  "Image uploaded to Cloudinary successfully:",
-                  imageUrl,
-                );
-              } catch (uploadError) {
-                console.error(
-                  "Cloudinary upload failed. Continuing without image:",
-                  uploadError,
-                );
-              }
-            } else {
-              console.log(
-                "No analyzed image was provided by the AI engine. Continuing without image.",
-              );
-            }
-
-            try {
-              const alertPayload = {
-                crosswalkId: "699f27d6b6cae8b2c7d16400",
-                imageUrl,
-                description:
-                  message.description ||
-                  "Automatic AI Detection: Danger detected.",
-                reasons: message.reasons || [],
-                detectionDistance: message.detection_distance || 0,
-                isHazard: true,
-                ledActivated: true,
-                detectedObjectsCount: message.person_count || 0,
-                timestamp: new Date(),
-              };
-
-              let populatedAlert;
-
-              if (isDatabaseReady()) {
-                const newAlert = new Alert(alertPayload);
-                const savedAlert = await newAlert.save();
-
-                populatedAlert = await Alert.findById(savedAlert._id).populate(
-                  "crosswalkId",
-                );
-                console.log("Alert saved successfully to MongoDB.");
-              } else {
-                populatedAlert = addFallbackAlert(alertPayload);
-                console.log(
-                  "MongoDB unavailable. Alert stored in fallback memory store.",
-                );
-              }
-
-              io.emit("new_alert", populatedAlert);
-              console.log("[Socket] Alert event emitted with populated data.");
-            } catch (alertError) {
-              console.error("Alert persistence or socket emit failed:", alertError);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      // Ignore non-JSON logs (like YOLO model loading text)
-    }
-  });
-
-  // Handle potential errors in the Python process
-  pythonProcess.stderr.on("data", (data) => {
-    console.error(`AI Engine stderr: ${data}`);
-  });
-
-  // Automatically restart engine if it crashes
-  pythonProcess.on("close", (code) => {
-    console.log(`AI process exited with code ${code}. Restarting in 5s...`);
-    setTimeout(startAIEngine, 5000);
-  });
+  return {
+    crosswalkId: body.crosswalkId || body.crosswalk_id || DEFAULT_CROSSWALK_ID,
+    imageUrl: body.imageUrl || body.image_url || null,
+    description:
+      body.description || "Automatic AI Detection: Danger detected.",
+    reasons: Array.isArray(body.reasons) ? body.reasons : [],
+    detectionDistance,
+    isHazard: body.isHazard ?? body.is_hazard ?? true,
+    ledActivated: body.ledActivated ?? body.led_activated ?? true,
+    detectedObjectsCount,
+    timestamp: body.timestamp ? new Date(body.timestamp) : new Date(),
+  };
 };
+
+const saveAlertAndEmit = async (alertPayload) => {
+  if (!isDatabaseReady()) {
+    const error = new Error(
+      "MongoDB is not connected. External alert was not saved.",
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const newAlert = new Alert(alertPayload);
+  const savedAlert = await newAlert.save();
+
+  const populatedAlert = await Alert.findById(savedAlert._id).populate(
+    "crosswalkId",
+  );
+  console.log("[Alerts] Alert saved successfully to MongoDB.");
+
+  io.emit("new_alert", populatedAlert);
+  console.log("[Socket] Alert event emitted with populated data.");
+
+  return populatedAlert;
+};
+
+app.post("/api/alerts", async (req, res) => {
+  try {
+    const alertPayload = buildAlertPayload(req.body);
+    const populatedAlert = await saveAlertAndEmit(alertPayload);
+
+    res.status(201).json(populatedAlert);
+  } catch (error) {
+    console.error("[Alerts] Failed to accept external AI alert:", error);
+    res.status(error.statusCode || 400).json({ error: error.message });
+  }
+});
 
 // Routes Mounting
 app.use("/crosswalks", crosswalkRoutes);
@@ -173,7 +107,7 @@ app.use("/alerts", alertRoutes); // For GET (Dashboard)
 // Base Route
 app.get("/", (req, res) => {
   res.send(
-    "AI Smart Crosswalk Backend is Running with Socket.io & Cloudinary.",
+    "AI Smart Crosswalk Backend is Running with Socket.io external alert ingestion.",
   );
 });
 
@@ -190,15 +124,7 @@ app.get('/keep-alive', (req, res) => {
 // Start Server using httpServer to support WebSockets
 httpServer.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-
-  // Start the AI worker after the HTTP server is already accepting requests.
-  setImmediate(() => {
-    if (shouldStartAIEngine) {
-      startAIEngine();
-    } else {
-      console.log(
-        "[Server] AI engine startup skipped. Set ENABLE_AI_ENGINE=true to enable it.",
-      );
-    }
-  });
+  console.log(
+    "[Server] Local Python AI worker is disabled. Awaiting external alerts at POST /api/alerts.",
+  );
 });
