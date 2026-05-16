@@ -29,8 +29,8 @@ const DEFAULT_CROSSWALK_ID = "699f27d6b6cae8b2c7d16400";
 
 // Middleware Setup
 app.use(cors({ origin: allowedOrigin })); // Enable CORS for the Vercel frontend
-app.use(express.json({ limit: "10mb" })); // Parse JSON bodies for API requests
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // This allows the browser to access the images created by the AI
 const imagesPath = path.resolve(__dirname, "ai_engine", "output_images");
