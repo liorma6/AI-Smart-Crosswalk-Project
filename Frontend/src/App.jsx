@@ -8,6 +8,7 @@ import Statistics from "./pages/Statistics";
 import WatchlistPage from "./pages/WatchlistPage";
 import NotFound from "./pages/NotFound";
 import { WatchlistProvider } from "./context/WatchlistContext";
+import { AlertsProvider } from "./context/AlertsContext";
 import "./App.css";
 import "./index.css";
 
@@ -116,35 +117,37 @@ function App() {
   return (
     <Router>
       <WatchlistProvider>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <div className="flex min-h-[calc(100vh-4rem)] flex-col sm:min-h-[calc(100vh-4.5rem)]">
-            <div className="flex-1">
-              <AnimatedRoutes />
-            </div>
-            <footer className="border-t border-slate-200 bg-white/95">
-              <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                <Link
-                  to="/"
-                  className="font-semibold text-slate-700 transition hover:text-blue-600"
-                >
-                  Smart Crosswalk
-                </Link>
-                <div className="flex flex-wrap items-center gap-4">
-                  <Link to="/" className="transition hover:text-blue-600">
-                    Home
-                  </Link>
-                  <Link to="/watchlist" className="transition hover:text-blue-600">
-                    Watchlist
-                  </Link>
-                  <Link to="/statistics" className="transition hover:text-blue-600">
-                    Statistics
-                  </Link>
-                </div>
+        <AlertsProvider>
+          <div className="min-h-screen bg-gray-50">
+            <Navigation />
+            <div className="flex min-h-[calc(100vh-4rem)] flex-col sm:min-h-[calc(100vh-4.5rem)]">
+              <div className="flex-1">
+                <AnimatedRoutes />
               </div>
-            </footer>
+              <footer className="border-t border-slate-200 bg-white/95">
+                <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                  <Link
+                    to="/"
+                    className="font-semibold text-slate-700 transition hover:text-blue-600"
+                  >
+                    Smart Crosswalk
+                  </Link>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <Link to="/" className="transition hover:text-blue-600">
+                      Home
+                    </Link>
+                    <Link to="/watchlist" className="transition hover:text-blue-600">
+                      Watchlist
+                    </Link>
+                    <Link to="/statistics" className="transition hover:text-blue-600">
+                      Statistics
+                    </Link>
+                  </div>
+                </div>
+              </footer>
+            </div>
           </div>
-        </div>
+        </AlertsProvider>
       </WatchlistProvider>
     </Router>
   );

@@ -77,39 +77,49 @@ const startAIEngine = () => {
           );
 
           if (message.is_dangerous) {
-            console.log("Hazard detected! Uploading to Cloudinary...");
+            console.log("Hazard detected! Creating alert...");
 
-            // Define local path for the analyzed image
-            const localFilePath = path.join(imagesPath, message.file);
+            let imageUrl = null;
+
+            if (message.file) {
+              try {
+                const localFilePath = path.join(imagesPath, message.file);
+                const uploadResponse = await cloudinary.uploader.upload(
+                  localFilePath,
+                  {
+                    folder: "smart_crosswalk_alerts",
+                  },
+                );
+
+                imageUrl = uploadResponse.secure_url;
+                console.log(
+                  "Image uploaded to Cloudinary successfully:",
+                  imageUrl,
+                );
+              } catch (uploadError) {
+                console.error(
+                  "Cloudinary upload failed. Continuing without image:",
+                  uploadError,
+                );
+              }
+            } else {
+              console.log(
+                "No analyzed image was provided by the AI engine. Continuing without image.",
+              );
+            }
 
             try {
-              // Upload the analyzed image to Cloudinary
-              const uploadResponse = await cloudinary.uploader.upload(
-                localFilePath,
-                {
-                  folder: "smart_crosswalk_alerts",
-                },
-              );
-
-              console.log(
-                "Image uploaded to Cloudinary successfully:",
-                uploadResponse.secure_url,
-              );
-
-              // Create a new Alert document based on your Schema
               const alertPayload = {
-                // Placeholder ID - In a real scenario, this would match a specific camera/location
-                crosswalkId: "699f27d6b6cae8b2c7d16400", // Example ObjectId
-                // Use the secure URL from Cloudinary instead of localhost
-                imageUrl: uploadResponse.secure_url,
+                crosswalkId: "699f27d6b6cae8b2c7d16400",
+                imageUrl,
                 description:
                   message.description ||
                   "Automatic AI Detection: Danger detected.",
-                reasons: message.reasons || [], // Save the reasons identified by AI
-                detectionDistance: message.detection_distance || 0, // Save the distance calculated by the AI engine
+                reasons: message.reasons || [],
+                detectionDistance: message.detection_distance || 0,
                 isHazard: true,
                 ledActivated: true,
-                detectedObjectsCount: message.person_count || 0, // Save the count of detected people (if provided by AI)
+                detectedObjectsCount: message.person_count || 0,
                 timestamp: new Date(),
               };
 
@@ -119,13 +129,10 @@ const startAIEngine = () => {
                 const newAlert = new Alert(alertPayload);
                 const savedAlert = await newAlert.save();
 
-                // Populate the crosswalkId reference to get full crosswalk details (Location, Name, etc.)
                 populatedAlert = await Alert.findById(savedAlert._id).populate(
                   "crosswalkId",
                 );
-                console.log(
-                  "Alert saved successfully to MongoDB with Cloudinary URL.",
-                );
+                console.log("Alert saved successfully to MongoDB.");
               } else {
                 populatedAlert = addFallbackAlert(alertPayload);
                 console.log(
@@ -133,13 +140,10 @@ const startAIEngine = () => {
                 );
               }
 
-              // --- REAL-TIME NOTIFICATION ---
-              // Notify all connected clients about the new hazard in real-time
-              // Emit the populated alert which now includes full crosswalk details and the new distance field
               io.emit("new_alert", populatedAlert);
               console.log("[Socket] Alert event emitted with populated data.");
-            } catch (uploadError) {
-              console.error("Cloudinary or Socket Error:", uploadError);
+            } catch (alertError) {
+              console.error("Alert persistence or socket emit failed:", alertError);
             }
           }
         }

@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Filter, Search, X } from "lucide-react";
 import CrosswalkCard from "../components/CrosswalkCard";
 import { SkeletonCard } from "../components/SkeletonLoader";
 import { useWatchlist } from "../context/WatchlistContext";
-import { useRealTimeUpdates } from "../hooks/useRealTimeUpdates";
+import { useAlerts } from "../context/AlertsContext";
 import { fetchCrosswalks } from "../services/api";
 
 const transliterateHebrewToEnglish = (hebrewText) => {
@@ -114,13 +114,52 @@ const statusStyles = {
 
 const CrosswalksList = () => {
   const navigate = useNavigate();
-  const { data, loading, error } = useRealTimeUpdates(fetchCrosswalks, 15000);
-  const { isFavorite, toggleFavorite, watchlistIds } = useWatchlist();
+  const {
+    alerts,
+    loading: alertsLoading,
+    error: alertsError,
+    connectionStatus,
+  } = useAlerts();
+  const { isFavorite, toggleFavorite } = useWatchlist();
+  const [crosswalks, setCrosswalks] = useState([]);
+  const [crosswalksLoading, setCrosswalksLoading] = useState(true);
+  const [crosswalksError, setCrosswalksError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  const crosswalks = useMemo(() => data || [], [data]);
+  useEffect(() => {
+    const loadCrosswalks = async () => {
+      try {
+        setCrosswalksLoading(true);
+        const nextCrosswalks = await fetchCrosswalks();
+        setCrosswalks(nextCrosswalks || []);
+        setCrosswalksError(null);
+      } catch (err) {
+        setCrosswalksError(err.message || "Failed to load crossings");
+      } finally {
+        setCrosswalksLoading(false);
+      }
+    };
+
+    loadCrosswalks();
+  }, []);
+
+  const alertsByCrosswalkId = useMemo(() => {
+    return alerts.reduce((counts, alert) => {
+      const crosswalkId =
+        typeof alert.crosswalkId === "object"
+          ? alert.crosswalkId?._id
+          : alert.crosswalkId;
+
+      if (!crosswalkId) {
+        return counts;
+      }
+
+      counts.set(String(crosswalkId), (counts.get(String(crosswalkId)) || 0) + 1);
+      return counts;
+    }, new Map());
+  }, [alerts]);
 
   const filteredCrosswalks = useMemo(() => {
     let nextCrosswalks = [...crosswalks];
@@ -168,6 +207,9 @@ const CrosswalksList = () => {
     setStatusFilter("all");
     setShowFilters(false);
   };
+
+  const loading = crosswalksLoading || alertsLoading;
+  const error = crosswalksError || alertsError;
 
   if (loading) {
     return (
@@ -231,9 +273,9 @@ const CrosswalksList = () => {
                 </div>
               </div>
               <div className="flex min-h-[96px] flex-col items-center justify-center rounded-2xl bg-amber-50 px-4 py-3 text-center text-amber-700">
-                <div className="text-2xl font-semibold">{watchlistIds.length}</div>
+                <div className="text-2xl font-semibold">{alerts.length}</div>
                 <div className="text-xs uppercase tracking-[0.16em]">
-                  Watchlist
+                  Live alerts
                 </div>
               </div>
             </div>
@@ -314,6 +356,9 @@ const CrosswalksList = () => {
           <p className="text-sm text-slate-600">
             Showing {filteredCrosswalks.length} of {crosswalks.length} crossings
           </p>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+            Socket {connectionStatus}
+          </span>
         </div>
 
         {filteredCrosswalks.length === 0 ? (
@@ -338,6 +383,12 @@ const CrosswalksList = () => {
                   onToggleFavorite={toggleFavorite}
                   onViewDetails={(crosswalkId) => navigate(`/crosswalk/${crosswalkId}`)}
                 />
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+                  <span className="font-semibold text-slate-900">
+                    {alertsByCrosswalkId.get(String(crosswalk._id)) || 0}
+                  </span>{" "}
+                  live alerts for this crossing
+                </div>
               </div>
             ))}
           </section>
