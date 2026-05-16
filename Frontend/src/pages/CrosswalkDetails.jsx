@@ -485,7 +485,7 @@ const CrosswalkDetails = () => {
                     <div className="mt-4 border-t border-gray-200 pt-4">
                       <div className="flex items-center gap-3">
                         <div
-                          onClick={() => setSelectedImage(alert.imageUrl)}
+                          onClick={() => setSelectedImage(getImageUrl(alert.imageUrl))}
                           className="group relative h-32 w-32 cursor-pointer overflow-hidden rounded-lg bg-gray-100 transition hover:ring-2 hover:ring-blue-500"
                         >
                           <img
@@ -513,7 +513,15 @@ const CrosswalkDetails = () => {
                           <p className="mb-1">
                             <span className="font-semibold">Image source:</span>
                           </p>
-                          <p className="break-all font-mono">{alert.imageUrl}</p>
+                          <img
+                            src={getImageUrl(alert.imageUrl)}
+                            alt="Alert source"
+                            style={{
+                              maxWidth: "100%",
+                              borderRadius: "8px",
+                              display: "block",
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
