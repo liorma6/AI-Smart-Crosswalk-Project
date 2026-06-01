@@ -10,9 +10,6 @@ __pycache__/
 *.py[cod]
 
 # Project documentation
-README.md
-ReadME.md
-readme.md
 DEPLOYMENT.md
 Deployment.md
 deployment.md
