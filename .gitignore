@@ -10,6 +10,8 @@ __pycache__/
 *.py[cod]
 
 # Project documentation
+README.md
+QUICK_START.md
 DEPLOYMENT.md
 Deployment.md
 deployment.md
