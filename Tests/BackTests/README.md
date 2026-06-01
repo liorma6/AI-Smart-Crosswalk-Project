@@ -8,8 +8,8 @@
 
 הקובץ צריך להכיל:
 ```env
-MONGO_URI=mongodb+srv://app_user:smartcross123@cluster0.cozip.mongodb.net/SmartCrosswalkDB?appName=Cluster0
-PORT=3000
+# Keep the real MongoDB connection string and any local port override only in Backend/.env.
+# Do not copy production credentials into documentation or source control.
 ```
 
 ### שלב 2: התקן dependencies (פעם אחת)
@@ -63,12 +63,12 @@ node seed.js
 npm install
 ```
 
-### שגיאה: MONGO_URI is not defined
+### שגיאה: MongoDB connection string is not defined
 
 **פתרון:**
-ודא שיש קובץ `.env` ב-`Backend/` עם:
+ודא שיש קובץ `.env` ב-`Backend/` עם מחרוזת חיבור תקינה ל-MongoDB.
 ```
-MONGO_URI=mongodb+srv://...
+Backend/.env
 ```
 
 ### שגיאה: Failed to connect to MongoDB

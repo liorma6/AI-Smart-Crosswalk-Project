@@ -126,8 +126,8 @@ cd AI-Smart-Crosswalk-Project
 Create a `.env` file inside the `Backend` directory:
 
 ```env
-PORT=3000
-MONGO_URI=your_mongodb_connection_string
+# Optional: set the backend port if you do not want to use the default.
+# Add your MongoDB connection string locally if you want persistent storage.
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
@@ -135,7 +135,7 @@ ENABLE_AI_ENGINE=true
 AI_ENGINE_POLL_INTERVAL=2
 ```
 
-> If `MONGO_URI` is not configured or MongoDB is unavailable, the backend can still run with fallback in-memory data.
+> If a MongoDB connection string is not configured or MongoDB is unavailable, the backend can still run with fallback in-memory data.
 
 ### 3. Install Python AI Dependencies
 

@@ -120,8 +120,8 @@ http://localhost:5173
 
 ### Backend/.env (כבר קיים):
 ```env
-MONGO_URI=mongodb+srv://app_user:smartcross123@cluster0.cozip.mongodb.net/SmartCrosswalkDB?appName=Cluster0
-PORT=3000
+# Keep the real MongoDB connection string and any local port override only in Backend/.env.
+# Do not copy production credentials into documentation or source control.
 ```
 
 ---
@@ -166,7 +166,7 @@ lsof -ti:3000 | xargs kill -9
 
 ### בעיה: MongoDB Connection Error
 1. בדוק חיבור לאינטרנט
-2. ודא שה-MONGO_URI נכון ב-`.env`
+2. ודא שמחרוזת החיבור ל-MongoDB נכונה ב-`.env`
 3. ודא שה-IP שלך מורשה ב-MongoDB Atlas
 
 ---
